@@ -1,5 +1,6 @@
 package com.diploma.chat.services.impl;
 
+import com.diploma.chat.exceptions.NotFoundException;
 import com.diploma.chat.models.ChatMessage;
 import com.diploma.chat.models.MessageStatus;
 import com.diploma.chat.repositories.ChatMessageRepository;
@@ -16,8 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatMessageServiceImpl implements ChatMessageService {
-    private ChatMessageRepository repository;
-    private ChatRoomService chatRoomService;
+    private final ChatMessageRepository repository;
+    private final ChatRoomService chatRoomService;
 
     @Transactional
     public ChatMessage save(ChatMessage chatMessage) {
@@ -36,8 +37,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     public List<ChatMessage> findChatMessages(String senderId, String recipientId) {
         var chatId = chatRoomService.getChatId(senderId, recipientId, false);
 
-        var messages =
-                chatId.map(cId -> repository.findByChatId(cId)).orElse(new ArrayList<>());
+        var messages = chatId.map(repository::findByChatId).orElse(new ArrayList<>());
 
         if(!messages.isEmpty()) {
             updateStatuses(senderId, recipientId, MessageStatus.DELIVERED);
@@ -55,7 +55,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
                     chatMessage.setStatus(MessageStatus.DELIVERED);
                     return repository.save(chatMessage);
                 })
-                .orElseThrow(RuntimeException::new);
+                .orElseThrow(NotFoundException::new);
     }
 
     private void updateStatuses(String senderId, String receiverId, MessageStatus status) {
