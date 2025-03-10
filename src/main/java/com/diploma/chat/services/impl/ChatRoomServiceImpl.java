@@ -15,6 +15,7 @@ import java.util.Optional;
 public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
 
+    @Transactional
     public Optional<String> getChatId(String senderId, String receiverId, boolean createIfNotExist) {
         return chatRoomRepository
                 .findBySenderIdAndReceiverId(senderId, receiverId)
