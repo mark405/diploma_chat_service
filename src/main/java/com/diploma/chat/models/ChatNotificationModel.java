@@ -4,7 +4,7 @@ import lombok.*;
 
 @Getter
 @Setter
-@Builder()
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ChatNotificationModel {
@@ -12,7 +12,5 @@ public class ChatNotificationModel {
 
     private String senderId;
 
-    private String receiverId;
-
-    private String content;
+    private String senderName;
 }

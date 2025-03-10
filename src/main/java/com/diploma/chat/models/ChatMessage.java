@@ -22,9 +22,15 @@ public class ChatMessage {
 
     private String senderId;
 
+    private String senderName;
+
     private String receiverId;
+
+    private String receiverName;
 
     private String content;
 
     private Date timestamp;
+
+    private MessageStatus status;
 }

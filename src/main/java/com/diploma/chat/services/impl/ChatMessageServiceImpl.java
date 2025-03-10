@@ -1,6 +1,7 @@
 package com.diploma.chat.services.impl;
 
 import com.diploma.chat.models.ChatMessage;
+import com.diploma.chat.models.MessageStatus;
 import com.diploma.chat.repositories.ChatMessageRepository;
 import com.diploma.chat.services.ChatMessageService;
 import com.diploma.chat.services.ChatRoomService;
@@ -15,25 +16,55 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatMessageServiceImpl implements ChatMessageService {
-    private final ChatMessageRepository chatMessageRepository;
-    private final ChatRoomService chatRoomService;
+    private ChatMessageRepository repository;
+    private ChatRoomService chatRoomService;
 
-    @Override
     @Transactional
     public ChatMessage save(ChatMessage chatMessage) {
-        var chatId = chatRoomService.getChatRoomId(
-                chatMessage.getSenderId(),
-                chatMessage.getReceiverId(),
-                true)
-                .orElseThrow();
-        chatMessage.setChatId(chatId);
-        return chatMessageRepository.save(chatMessage);
+        chatMessage.setStatus(MessageStatus.RECEIVED);
+        repository.save(chatMessage);
+        return chatMessage;
     }
 
     @Override
-    public List<ChatMessage> findChatMessages(String senderId, String receiverId) {
-        var chatId = chatRoomService.getChatRoomId(senderId, receiverId, false);
+    public long countNewMessages(String senderId, String recipientId) {
+        return repository.countBySenderIdAndReceiverIdAndStatus(
+                senderId, recipientId, MessageStatus.RECEIVED);
+    }
 
-        return chatId.map(chatMessageRepository::findByChatId).orElse(new ArrayList<>());
+    @Transactional
+    public List<ChatMessage> findChatMessages(String senderId, String recipientId) {
+        var chatId = chatRoomService.getChatId(senderId, recipientId, false);
+
+        var messages =
+                chatId.map(cId -> repository.findByChatId(cId)).orElse(new ArrayList<>());
+
+        if(!messages.isEmpty()) {
+            updateStatuses(senderId, recipientId, MessageStatus.DELIVERED);
+        }
+
+        return messages;
+    }
+
+    @Override
+    @Transactional
+    public ChatMessage findById(Long id) {
+        return repository
+                .findById(id)
+                .map(chatMessage -> {
+                    chatMessage.setStatus(MessageStatus.DELIVERED);
+                    return repository.save(chatMessage);
+                })
+                .orElseThrow(RuntimeException::new);
+    }
+
+    private void updateStatuses(String senderId, String receiverId, MessageStatus status) {
+        List<ChatMessage> messages = repository.findBySenderIdAndReceiverId(senderId, receiverId);
+
+        for (ChatMessage message : messages) {
+            message.setStatus(status);
+        }
+
+        repository.saveAll(messages);
     }
 }
